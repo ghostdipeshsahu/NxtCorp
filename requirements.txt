@@ -1,0 +1,3 @@
+# Root requirements.txt — Render's auto-detector looks for this file at the
+# project root. We delegate to the canonical list under backend/.
+-r backend/requirements.txt
