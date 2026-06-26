@@ -155,86 +155,165 @@ def _check_z005_gaps_covered_non_empty_when_score_high(
 # ---------- LLM-judged checks ----------
 
 
-_LLM_JUDGE_SYSTEM = """You are a strict evaluator for Zara Khan's QA assessments. You check ONE criterion at a time. Return JSON only:
+def _call_llm_judge(
+    system: str, user: str, criterion_id: str, max_tokens: int = 280,
+) -> tuple[bool, str, dict[str, Any]]:
+    """Run one LLM-judge call and return (passed, reason, raw_parsed).
 
-{"passed": true | false, "reason": "<one short sentence>"}
-
-Be strict but fair. Pass only when the criterion is genuinely met.
-"""
-
-
-def _llm_judge(criterion_id: str, principle: str, prompt_body: str) -> tuple[bool, str]:
-    """Run a single LLM-judge call for an Zara criterion."""
-    user = (
-        f"CRITERION {criterion_id}: {principle}\n\n"
-        f"{prompt_body}\n\n"
-        "Does Zara's output satisfy this criterion? Return JSON only."
-    )
+    On any LLM / parse error, default to PASS (don't block students on
+    infra). Surface the skip reason so the report shows what happened.
+    """
     try:
         result = llm_chat(
-            system=_LLM_JUDGE_SYSTEM,
+            system=system,
             user=user,
-            max_tokens=120,
+            max_tokens=max_tokens,
             temperature=0.1,
             response_format_json=True,
         )
         parsed = extract_json(result.text)
-        passed = bool(parsed.get("passed", False))
-        reason = str(parsed.get("reason", "(no reason)")).strip()
-        return passed, reason
+        return False, "", parsed  # caller interprets per-criterion shape
     except (LLMError, ValueError) as e:
-        # If the judge itself errors, default to PASS (don't block the
-        # student on infra issues). Surface in the report.
-        return True, f"(judge skipped — {type(e).__name__})"
+        return True, f"(judge skipped — {type(e).__name__})", {}
+
+
+# ---------- Z002 — three-component note check ----------
+
+_Z002_JUDGE_SYSTEM = """You are evaluating a zara_note written by a QA assessor.
+
+A valid zara_note must contain ALL THREE of the following components:
+1. What the student got RIGHT (specific rules or logic they covered correctly)
+2. What was MISSED (the specific rule, value, or constraint that is absent)
+3. WHY it matters (what will go wrong in the code if this gap isn't addressed)
+
+Respond ONLY with valid JSON:
+{
+  "has_what_is_right": true,
+  "has_what_is_missed": true,
+  "has_why_it_matters": true,
+  "pass": true,
+  "reason": "one sentence — which component is missing, or 'all three present'"
+}
+
+"pass" is true only when ALL THREE are true. Never partial credit.
+"""
 
 
 def _check_z002_note_actionable(
     a: AssessmentResult, question: dict[str, Any], student_prompt: str,
 ) -> tuple[bool, str]:
-    """Z002 — zara_note gives Priya enough context to ask one targeted
-    Socratic question. Should state what was RIGHT, what was MISSED, and
-    WHY this matters.
+    """Z002 — zara_note must contain all three components: what's right,
+    what's missed, why it matters. LLM judge scores each independently.
+    All-or-nothing — no partial credit.
     """
-    body = (
-        f"zara_note:\n{a.zara_note}\n\n"
-        f"primary_gap: {a.primary_gap}\n"
-        f"gaps_covered: {a.gaps_covered}\n"
-        f"gaps_missing: {a.gaps_missing}"
-    )
-    return _llm_judge(
-        "Z002",
-        "zara_note must give Priya enough context to ask ONE targeted Socratic "
-        "question. It should state what the student got right, what was missed, "
-        "and WHY this matters for the task — without revealing the fix.",
-        body,
-    )
+    note = (a.zara_note or "").strip()
+    if not note:
+        return False, "zara_note is empty"
+
+    user = f"zara_note to evaluate:\n\"{note}\"\n"
+    skipped, skip_reason, parsed = _call_llm_judge(_Z002_JUDGE_SYSTEM, user, "Z002")
+    if skipped:
+        return True, skip_reason
+
+    has_right   = bool(parsed.get("has_what_is_right", False))
+    has_missed  = bool(parsed.get("has_what_is_missed", False))
+    has_why     = bool(parsed.get("has_why_it_matters", False))
+    pass_flag   = bool(parsed.get("pass", has_right and has_missed and has_why))
+    reason      = str(parsed.get("reason", "(no reason)")).strip()
+
+    # Re-derive pass deterministically from the three flags to defend
+    # against LLM giving inconsistent `pass`+`has_*` combinations.
+    passed = has_right and has_missed and has_why
+    if not passed:
+        missing = []
+        if not has_right:  missing.append("RIGHT")
+        if not has_missed: missing.append("MISSED")
+        if not has_why:    missing.append("WHY")
+        return False, f"missing components: {missing} ({reason})"
+    return True, "all three components present"
+
+
+# ---------- Z006 — per-case realistic + derivable check ----------
+
+_Z006_JUDGE_SYSTEM = """You are evaluating edge cases proposed by a QA assessor (Zara) for a function.
+
+Evaluate each edge case against TWO criteria:
+
+1. REALISTIC — could this input actually occur in real business data?
+   - Fails: zero salary, negative years, unicode in name (impossible or irrelevant in payroll context)
+   - Passes: employee on exact 1-year anniversary, salary right at the cap threshold
+
+2. DERIVABLE — could a careful developer anticipate this from the function signature
+   and business rules, even if the meeting never mentioned it explicitly?
+   - The meeting does NOT need to mention the edge case — Zara infers it
+   - Fails: only if the edge case requires knowledge completely outside the problem domain
+   - Passes: boundary conditions on any numeric parameter, exact equality on any threshold
+
+Respond ONLY with valid JSON:
+{
+  "edge_case_verdicts": [
+    {"case": "...", "realistic": true, "derivable": true}
+  ],
+  "any_failed": false,
+  "reason": "which case failed and why, or 'all cases passed'"
+}
+
+"any_failed" is true if ANY edge case fails EITHER criterion.
+"""
 
 
 def _check_z006_edge_cases_genuine(
     a: AssessmentResult, question: dict[str, Any], student_prompt: str,
 ) -> tuple[bool, str]:
-    """Z006 — genuine_edge_cases must be realistic + something the student
-    could have anticipated from the meeting. Impossible scenarios (zero
-    salary, negative years) fail.
+    """Z006 — every entry in genuine_edge_cases must be (1) REALISTIC and
+    (2) DERIVABLE from function signature + business rules. The meeting is
+    domain CONTEXT — not a checklist of allowed cases. Zara infers edges
+    independently. LLM judge scores each case on both criteria.
     """
     if not a.genuine_edge_cases:
         return True, "no edge cases proposed (vacuous pass)"
-    script_lines = []
+
+    script_lines: list[str] = []
     for entry in (question.get("meeting_script") or [])[:8]:
         if isinstance(entry, dict):
             script_lines.append(f"- {entry.get('name', '?')}: {entry.get('message', '')}")
-    body = (
-        f"genuine_edge_cases:\n" + "\n".join(f"  - {e}" for e in a.genuine_edge_cases) +
-        "\n\nMEETING_SCRIPT:\n" + "\n".join(script_lines)
+    function_signature = question.get("function_signature") or "(none)"
+
+    user = (
+        "Meeting script (business rules only):\n"
+        + ("\n".join(script_lines) or "(empty)")
+        + f"\n\nFunction signature:\n{function_signature}"
+        + "\n\nEdge cases proposed:\n"
+        + "\n".join(f"  - {e}" for e in a.genuine_edge_cases)
     )
-    return _llm_judge(
-        "Z006",
-        "Every edge case must be (a) realistic — could actually happen in real "
-        "business data; (b) something the student could have anticipated from "
-        "the meeting. Impossible scenarios (zero salary, negative years, "
-        "obscure unicode) FAIL this criterion.",
-        body,
-    )
+    skipped, skip_reason, parsed = _call_llm_judge(_Z006_JUDGE_SYSTEM, user, "Z006", max_tokens=400)
+    if skipped:
+        return True, skip_reason
+
+    verdicts = parsed.get("edge_case_verdicts") or []
+    any_failed_flag = bool(parsed.get("any_failed", False))
+
+    # Re-derive from per-case verdicts to guard against inconsistent
+    # any_failed flag.
+    bad_cases: list[str] = []
+    if isinstance(verdicts, list):
+        for v in verdicts:
+            if not isinstance(v, dict):
+                continue
+            realistic = bool(v.get("realistic", True))
+            derivable = bool(v.get("derivable", True))
+            if not (realistic and derivable):
+                why = []
+                if not realistic: why.append("not realistic")
+                if not derivable: why.append("not derivable")
+                bad_cases.append(f"{v.get('case', '?')!r}: {', '.join(why)}")
+
+    if bad_cases or any_failed_flag:
+        reason = str(parsed.get("reason", "(no reason)")).strip()
+        if bad_cases:
+            return False, f"failing edges → {'; '.join(bad_cases)} | judge: {reason}"
+        return False, f"judge reported any_failed=true ({reason})"
+    return True, "all cases pass both REALISTIC + DERIVABLE"
 
 
 # ---------- Criteria registry ----------
