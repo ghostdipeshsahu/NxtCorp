@@ -1,0 +1,67 @@
+{
+  "id": "p001",
+  "title": "Bonus Calculator",
+  "exercise_type": "type_1",
+  "phase": "1",
+  "sequence": 1,
+  "function_signature": "def calculate_bonus(basic_salary, years_employed):",
+  "notes": "basic_salary is a number in rupees. years_employed is a number and can be a decimal like 1.5.",
+  "meeting_script": [
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "Morning everyone. HR needs a bonus calculator built into the payroll system. Rahul, Sneha — can you walk us through what you need?"
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "Sure. Employees who have completed more than one year with us get a performance bonus. The bonus is 10 percent of their basic salary."
+    },
+    {
+      "character": "sneha",
+      "name": "Sneha Kapoor",
+      "role": "Finance Manager",
+      "message": "One thing from my side — the bonus cannot exceed Rs 50,000. We have a strict budget cap per employee."
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "And just to clarify — the 10 percent is calculated on basic salary only. Not the total CTC package."
+    },
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "Okay I think that covers it. Head to your desk when you are ready."
+    }
+  ],
+  "sample_tests": [
+    {
+      "input": [
+        100000,
+        2
+      ],
+      "expected": 10000,
+      "description": "Normal case"
+    },
+    {
+      "input": [
+        100000,
+        0
+      ],
+      "expected": 0,
+      "description": "Under 1 year"
+    },
+    {
+      "input": [
+        200000,
+        3
+      ],
+      "expected": 20000,
+      "description": "Normal case higher salary"
+    }
+  ]
+}

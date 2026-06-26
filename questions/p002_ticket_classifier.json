@@ -1,0 +1,47 @@
+{
+  "id": "p002",
+  "title": "Support Ticket Classifier",
+  "exercise_type": "type_2",
+  "phase": "1",
+  "sequence": 2,
+  "function_signature": "def classify_ticket(ticket_text, customer_type):",
+  "meeting_script": [
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "We have a new requirement from the support team. Vikram can you explain what you need?"
+    },
+    {
+      "character": "vikram",
+      "name": "Vikram Nair",
+      "role": "Product Manager",
+      "message": "Sure. Right now support tickets come in and someone manually decides which team handles it. We want to automate that routing."
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "We have three teams that handle tickets — billing, technical support, and general enquiries."
+    },
+    {
+      "character": "vikram",
+      "name": "Vikram Nair",
+      "role": "Product Manager",
+      "message": "Priority also matters. Enterprise customers always get high priority. Everyone else gets normal priority."
+    },
+    {
+      "character": "ananya",
+      "name": "Ananya Singh",
+      "role": "Client Representative",
+      "message": "From the client side — billing tickets are ones mentioning payment or invoice. Technical ones mention error or not working. Everything else is general."
+    },
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "Your job is to break this down into precise sub-tasks before we start building anything. Head to your desk."
+    }
+  ],
+  "sample_tests": []
+}

@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="wallLight" cx="30%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#3a2618" />
+      <stop offset="50%" stop-color="#231711" />
+      <stop offset="100%" stop-color="#0e0b08" />
+    </radialGradient>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f1a14" />
+      <stop offset="100%" stop-color="#0c0805" />
+    </linearGradient>
+    <linearGradient id="counter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a3f2a" />
+      <stop offset="100%" stop-color="#2a1c12" />
+    </linearGradient>
+    <linearGradient id="counterFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d2918" />
+      <stop offset="100%" stop-color="#150d08" />
+    </linearGradient>
+    <linearGradient id="machineBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a3a2a" />
+      <stop offset="50%" stop-color="#3d2918" />
+      <stop offset="100%" stop-color="#1a1108" />
+    </linearGradient>
+    <radialGradient id="warmGlow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="rgba(245,166,35,0.45)" />
+      <stop offset="60%" stop-color="rgba(245,166,35,0.1)" />
+      <stop offset="100%" stop-color="rgba(245,166,35,0)" />
+    </radialGradient>
+    <radialGradient id="screenAmber" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f5c842" />
+      <stop offset="100%" stop-color="#8a5a20" />
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="55%" r="65%">
+      <stop offset="50%" stop-color="rgba(0,0,0,0)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.7)" />
+    </radialGradient>
+    <filter id="softGlow"><feGaussianBlur stdDeviation="4" /></filter>
+    <filter id="bigGlow"><feGaussianBlur stdDeviation="14" /></filter>
+  </defs>
+
+  <!-- BACK WALL (subway tile texture suggestion) -->
+  <rect x="0" y="0" width="800" height="420" fill="url(#wallLight)" />
+
+  <!-- Subway tile pattern -->
+  <g opacity="0.18" fill="none" stroke="#1a1108" stroke-width="1">
+    <!-- horizontal grout lines -->
+    <line x1="0" y1="60"  x2="800" y2="60" />
+    <line x1="0" y1="120" x2="800" y2="120" />
+    <line x1="0" y1="180" x2="800" y2="180" />
+    <line x1="0" y1="240" x2="800" y2="240" />
+    <line x1="0" y1="300" x2="800" y2="300" />
+    <line x1="0" y1="360" x2="800" y2="360" />
+    <line x1="0" y1="420" x2="800" y2="420" />
+    <!-- offset vertical grout per row -->
+    <line x1="40"  y1="0"   x2="40"  y2="60" />
+    <line x1="120" y1="0"   x2="120" y2="60" />
+    <line x1="200" y1="0"   x2="200" y2="60" />
+    <line x1="280" y1="0"   x2="280" y2="60" />
+    <line x1="360" y1="0"   x2="360" y2="60" />
+    <line x1="440" y1="0"   x2="440" y2="60" />
+    <line x1="520" y1="0"   x2="520" y2="60" />
+    <line x1="600" y1="0"   x2="600" y2="60" />
+    <line x1="680" y1="0"   x2="680" y2="60" />
+    <line x1="760" y1="0"   x2="760" y2="60" />
+    <line x1="0"   y1="60"  x2="0"   y2="120" />
+    <line x1="80"  y1="60"  x2="80"  y2="120" />
+    <line x1="160" y1="60"  x2="160" y2="120" />
+    <line x1="240" y1="60"  x2="240" y2="120" />
+    <line x1="320" y1="60"  x2="320" y2="120" />
+    <line x1="400" y1="60"  x2="400" y2="120" />
+    <line x1="480" y1="60"  x2="480" y2="120" />
+    <line x1="560" y1="60"  x2="560" y2="120" />
+    <line x1="640" y1="60"  x2="640" y2="120" />
+    <line x1="720" y1="60"  x2="720" y2="120" />
+    <line x1="40"  y1="120" x2="40"  y2="180" />
+    <line x1="120" y1="120" x2="120" y2="180" />
+    <line x1="200" y1="120" x2="200" y2="180" />
+    <line x1="280" y1="120" x2="280" y2="180" />
+    <line x1="360" y1="120" x2="360" y2="180" />
+    <line x1="440" y1="120" x2="440" y2="180" />
+    <line x1="520" y1="120" x2="520" y2="180" />
+    <line x1="600" y1="120" x2="600" y2="180" />
+    <line x1="680" y1="120" x2="680" y2="180" />
+    <line x1="760" y1="120" x2="760" y2="180" />
+  </g>
+
+  <!-- Skirting / counter top edge -->
+  <rect x="0" y="416" width="800" height="6" fill="#1a1108" />
+
+  <!-- FLOOR -->
+  <rect x="0" y="422" width="800" height="178" fill="url(#tile)" />
+  <!-- floor tile pattern -->
+  <g opacity="0.2" stroke="#1a1108" stroke-width="0.8">
+    <line x1="0" y1="470" x2="800" y2="470" />
+    <line x1="0" y1="520" x2="800" y2="520" />
+    <line x1="0" y1="570" x2="800" y2="570" />
+    <line x1="100" y1="422" x2="100" y2="600" />
+    <line x1="220" y1="422" x2="220" y2="600" />
+    <line x1="340" y1="422" x2="340" y2="600" />
+    <line x1="460" y1="422" x2="460" y2="600" />
+    <line x1="580" y1="422" x2="580" y2="600" />
+    <line x1="700" y1="422" x2="700" y2="600" />
+  </g>
+
+  <!-- COUNTER (where machine sits) -->
+  <rect x="80" y="380" width="380" height="40" fill="url(#counter)" stroke="#1a1108" stroke-width="2" />
+  <rect x="80" y="380" width="380" height="2" fill="rgba(245,166,35,0.35)" />
+  <rect x="80" y="420" width="380" height="40" fill="url(#counterFront)" />
+
+  <!-- POTTED PLANT (right of counter on wall) -->
+  <g transform="translate(680,260)">
+    <ellipse cx="0" cy="56" rx="20" ry="4" fill="#1a1108" />
+    <path d="M -18 56 L -16 28 L 16 28 L 18 56 Z" fill="#5a3a2a" />
+    <ellipse cx="0" cy="28" rx="16" ry="3" fill="#1a1108" />
+    <!-- spiky leaves -->
+    <g fill="#3a6a4a" stroke="#1a2a1a" stroke-width="0.5">
+      <path d="M 0 28 L -22 -16 L -16 -16 L 0 22 Z" />
+      <path d="M 0 28 L -12 -20 L -6 -22 L 0 18 Z" />
+      <path d="M 0 28 L -2 -28 L 4 -28 L 0 20 Z" />
+      <path d="M 0 28 L 12 -22 L 18 -18 L 0 22 Z" />
+      <path d="M 0 28 L 22 -14 L 20 -8 L 0 24 Z" />
+    </g>
+  </g>
+
+  <!-- "PANTRY" wall sign -->
+  <g transform="translate(540,40)">
+    <rect x="0" y="0" width="120" height="38" rx="3" fill="#1a1108" stroke="#f5c842" stroke-width="2" />
+    <text x="60" y="24" text-anchor="middle" font-family="serif" font-size="14" fill="#f5c842" letter-spacing="6">PANTRY</text>
+    <!-- coffee bean icon -->
+    <ellipse cx="14" cy="19" rx="6" ry="4" fill="#6b4226" />
+    <path d="M 9 19 Q 14 14 19 19" stroke="#f5c842" stroke-width="1" fill="none"/>
+  </g>
+
+  <!-- WARM AMBIENT GLOW behind machine -->
+  <ellipse cx="260" cy="280" rx="240" ry="180" fill="url(#warmGlow)" />
+
+  <!-- COFFEE MACHINE -->
+  <g transform="translate(190,160)">
+    <!-- body -->
+    <rect x="0" y="0" width="140" height="220" rx="8" fill="url(#machineBody)" stroke="#1a1108" stroke-width="2" />
+    <!-- top vent -->
+    <rect x="14" y="10" width="112" height="8" rx="2" fill="#1a1108" />
+    <line x1="20" y1="14" x2="120" y2="14" stroke="#3d2918" stroke-width="1" />
+    <!-- water tank (translucent strip on left) -->
+    <rect x="6" y="30" width="14" height="160" rx="3" fill="#7a9ab8" opacity="0.4" stroke="#1a1108" stroke-width="1" />
+    <line x1="10" y1="60"  x2="16" y2="60"  stroke="#fff5e4" opacity="0.4" />
+    <line x1="10" y1="100" x2="16" y2="100" stroke="#fff5e4" opacity="0.4" />
+    <line x1="10" y1="140" x2="16" y2="140" stroke="#fff5e4" opacity="0.4" />
+
+    <!-- display screen -->
+    <g transform="translate(30,28)">
+      <rect x="0" y="0" width="86" height="40" rx="3" fill="#1a1108" stroke="#3d2918" stroke-width="2" />
+      <rect x="3" y="3" width="80" height="34" rx="1" fill="url(#screenAmber)" />
+      <text x="43" y="20" text-anchor="middle" font-family="monospace" font-size="10" fill="#1a1108" font-weight="700">92°C</text>
+      <text x="43" y="32" text-anchor="middle" font-family="monospace" font-size="6" fill="#1a1108">brewing ▶</text>
+    </g>
+
+    <!-- buttons -->
+    <g transform="translate(34,80)">
+      <circle cx="0"  cy="0" r="7" fill="#1a1108" stroke="#f5a623" stroke-width="1.5" />
+      <circle cx="26" cy="0" r="7" fill="#1a1108" stroke="#f5a623" stroke-width="1.5" />
+      <circle cx="52" cy="0" r="7" fill="#1a1108" stroke="#f5a623" stroke-width="1.5" />
+      <circle cx="78" cy="0" r="7" fill="#1a1108" stroke="#f5a623" stroke-width="1.5" />
+      <!-- glowing button -->
+      <circle cx="26" cy="0" r="3" fill="#f5a623" filter="url(#softGlow)" />
+    </g>
+
+    <!-- spout assembly -->
+    <rect x="50" y="100" width="40" height="16" rx="2" fill="#1a1108" />
+    <rect x="55" y="116" width="30" height="10" fill="#1a1108" />
+    <rect x="60" y="126" width="20" height="6" rx="2" fill="#3d2918" />
+
+    <!-- coffee stream -->
+    <line x1="70" y1="132" x2="70" y2="152" stroke="#3a1f10" stroke-width="2" opacity="0.9">
+      <animate attributeName="opacity" values="0.9;0.5;0.9" dur="0.6s" repeatCount="indefinite"/>
+    </line>
+
+    <!-- drip tray + cup -->
+    <rect x="40" y="170" width="60" height="6" fill="#1a1108" />
+    <!-- cup -->
+    <g transform="translate(56,150)">
+      <path d="M 0 0 L 4 22 L 24 22 L 28 0 Z" fill="#f0e6d3" stroke="#1a1108" stroke-width="1" />
+      <ellipse cx="14" cy="0" rx="14" ry="3" fill="#3a1f10" />
+      <ellipse cx="14" cy="-0.5" rx="11" ry="1.5" fill="#5e3220" />
+      <path d="M 28 6 Q 36 10 34 16 Q 30 20 24 18" fill="none" stroke="#1a1108" stroke-width="2" />
+    </g>
+
+    <!-- side accent strip -->
+    <rect x="120" y="40" width="4" height="140" fill="#f5a623" opacity="0.6" />
+  </g>
+
+  <!-- STEAM PLUME -->
+  <g transform="translate(260,170)">
+    <ellipse cx="0"  cy="-10" rx="6" ry="8"  fill="rgba(240,230,211,0.18)" filter="url(#softGlow)">
+      <animate attributeName="opacity" values="0.05;0.32;0" dur="2.6s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="-10;-50;-90" dur="2.6s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="14" cy="-6"  rx="5" ry="7"  fill="rgba(240,230,211,0.16)" filter="url(#softGlow)">
+      <animate attributeName="opacity" values="0;0.28;0" dur="3.2s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="-6;-46;-86" dur="3.2s" begin="0.8s" repeatCount="indefinite"/>
+    </ellipse>
+    <ellipse cx="-12" cy="-8" rx="6" ry="8"  fill="rgba(240,230,211,0.14)" filter="url(#softGlow)">
+      <animate attributeName="opacity" values="0;0.26;0" dur="3s" begin="1.6s" repeatCount="indefinite"/>
+      <animate attributeName="cy" values="-8;-48;-88" dur="3s" begin="1.6s" repeatCount="indefinite"/>
+    </ellipse>
+  </g>
+
+  <!-- COFFEE BAG ON COUNTER -->
+  <g transform="translate(380,330)">
+    <rect x="0" y="0" width="50" height="60" rx="3" fill="#6b4226" />
+    <rect x="3" y="3" width="44" height="14" fill="#8a5a3a" />
+    <text x="25" y="38" text-anchor="middle" font-family="serif" font-size="8" fill="#f5c842" font-style="italic">CAFE</text>
+    <text x="25" y="48" text-anchor="middle" font-family="serif" font-size="6" fill="#f0e6d3">ARABICA</text>
+    <!-- crinkled top -->
+    <path d="M 0 0 L 8 4 L 14 0 L 22 4 L 28 0 L 36 4 L 42 0 L 50 4 L 50 0 Z" fill="#3d2918" />
+  </g>
+
+  <!-- MUGS HANGING ON WALL (left) -->
+  <g transform="translate(80,180)">
+    <!-- hooks -->
+    <line x1="0"  y1="0" x2="0"  y2="8" stroke="#3d2918" stroke-width="2" />
+    <line x1="40" y1="0" x2="40" y2="8" stroke="#3d2918" stroke-width="2" />
+    <line x1="80" y1="0" x2="80" y2="8" stroke="#3d2918" stroke-width="2" />
+    <!-- mugs -->
+    <g transform="translate(-12,10)">
+      <path d="M 0 0 L 4 26 L 20 26 L 24 0 Z" fill="#c47a6a" stroke="#1a1108" stroke-width="1" />
+      <path d="M 24 6 Q 30 8 30 14 Q 28 20 22 18" fill="none" stroke="#c47a6a" stroke-width="2" />
+    </g>
+    <g transform="translate(28,10)">
+      <path d="M 0 0 L 4 26 L 20 26 L 24 0 Z" fill="#7a9ab8" stroke="#1a1108" stroke-width="1" />
+      <path d="M 24 6 Q 30 8 30 14 Q 28 20 22 18" fill="none" stroke="#7a9ab8" stroke-width="2" />
+    </g>
+    <g transform="translate(68,10)">
+      <path d="M 0 0 L 4 26 L 20 26 L 24 0 Z" fill="#f5c842" stroke="#1a1108" stroke-width="1" />
+      <path d="M 24 6 Q 30 8 30 14 Q 28 20 22 18" fill="none" stroke="#f5c842" stroke-width="2" />
+    </g>
+  </g>
+
+  <!-- VIGNETTE -->
+  <rect x="0" y="0" width="800" height="600" fill="url(#vignette)" />
+</svg>

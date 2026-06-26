@@ -1,0 +1,43 @@
+{
+  "id": "p003",
+  "title": "Leave Policy Checker",
+  "exercise_type": "type_3",
+  "phase": "1",
+  "sequence": 3,
+  "function_signature": "def can_take_leave(balance, days_requested, days_employed):",
+  "meeting_script": [
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "Zara has flagged the leave checker before it goes to HR. Rahul can you walk us through what it should do?"
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "Sure. The function checks if an employee can take leave. They can if their leave balance is enough to cover the days requested."
+    },
+    {
+      "character": "sneha",
+      "name": "Sneha Kapoor",
+      "role": "Finance Manager",
+      "message": "There is also a probation rule. New employees in their first 90 days cannot take any leave at all."
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "Right. And the maximum anyone can request in a single request is 5 days. We do not allow more than that at once."
+    },
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "The dev team already built a version. Your job is to find where it might give wrong answers. Head to your desk."
+    }
+  ],
+  "sample_tests": [],
+  "ai_prompt_shown": "Write a function that checks if an employee can take leave.",
+  "ai_code_shown": "def can_take_leave(balance, days_requested, days_employed):\n    if days_employed < 90:\n        return False\n    return balance >= days_requested"
+}

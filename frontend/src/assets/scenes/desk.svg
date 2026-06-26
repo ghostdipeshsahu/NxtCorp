@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="wallLight" cx="35%" cy="60%" r="70%">
+      <stop offset="0%" stop-color="#322014" />
+      <stop offset="50%" stop-color="#1c130d" />
+      <stop offset="100%" stop-color="#0a0805" />
+    </radialGradient>
+    <linearGradient id="nightSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#070612" />
+      <stop offset="100%" stop-color="#1d1228" />
+    </linearGradient>
+    <linearGradient id="deskTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5e4029" />
+      <stop offset="50%" stop-color="#4a3220" />
+      <stop offset="100%" stop-color="#2a1c12" />
+    </linearGradient>
+    <linearGradient id="deskFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3d2918" />
+      <stop offset="100%" stop-color="#150d08" />
+    </linearGradient>
+    <radialGradient id="screenGlow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#a8d4c0" />
+      <stop offset="60%" stop-color="#3a6a5a" />
+      <stop offset="100%" stop-color="#0e1e1a" />
+    </radialGradient>
+    <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(245,166,35,0.7)" />
+      <stop offset="25%" stop-color="rgba(245,166,35,0.3)" />
+      <stop offset="65%" stop-color="rgba(245,166,35,0.08)" />
+      <stop offset="100%" stop-color="rgba(245,166,35,0)" />
+    </radialGradient>
+    <radialGradient id="monitorAmbient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(122,184,160,0.18)" />
+      <stop offset="100%" stop-color="rgba(122,184,160,0)" />
+    </radialGradient>
+    <radialGradient id="vignette" cx="50%" cy="55%" r="65%">
+      <stop offset="50%" stop-color="rgba(0,0,0,0)" />
+      <stop offset="100%" stop-color="rgba(0,0,0,0.75)" />
+    </radialGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a1c12" />
+      <stop offset="100%" stop-color="#0a0604" />
+    </linearGradient>
+    <filter id="softGlow"><feGaussianBlur stdDeviation="3" /></filter>
+    <filter id="bigGlow"><feGaussianBlur stdDeviation="14" /></filter>
+  </defs>
+
+  <!-- WALL -->
+  <rect x="0" y="0" width="800" height="440" fill="url(#wallLight)" />
+  <!-- skirting -->
+  <rect x="0" y="430" width="800" height="14" fill="#1a1108" />
+
+  <!-- FLOOR -->
+  <rect x="0" y="430" width="800" height="170" fill="url(#floor)" />
+  <line x1="0"   y1="600" x2="290" y2="430" stroke="#1a1208" stroke-width="1" opacity="0.5" />
+  <line x1="800" y1="600" x2="510" y2="430" stroke="#1a1208" stroke-width="1" opacity="0.5" />
+  <line x1="200" y1="600" x2="360" y2="430" stroke="#1a1208" stroke-width="1" opacity="0.4" />
+  <line x1="600" y1="600" x2="440" y2="430" stroke="#1a1208" stroke-width="1" opacity="0.4" />
+
+  <!-- SMALL BACK WINDOW (further away than cabin) -->
+  <g transform="translate(580,90)">
+    <rect x="-4" y="-4" width="168" height="108" fill="#2a1c14" />
+    <rect x="0"  y="0"  width="160" height="100" fill="url(#nightSky)" />
+    <!-- distant skyline -->
+    <g fill="#0a0610">
+      <rect x="4"   y="62" width="14" height="38" />
+      <rect x="22"  y="50" width="22" height="50" />
+      <rect x="48"  y="58" width="18" height="42" />
+      <rect x="70"  y="46" width="20" height="54" />
+      <rect x="94"  y="55" width="22" height="45" />
+      <rect x="120" y="42" width="18" height="58" />
+      <rect x="142" y="60" width="14" height="40" />
+    </g>
+    <!-- city lights -->
+    <g fill="#f5a623">
+      <rect x="8"   y="74" width="1.5" height="1.5" />
+      <rect x="14"  y="86" width="1.5" height="1.5" />
+      <rect x="28"  y="70" width="1.5" height="1.5" />
+      <rect x="36"  y="84" width="1.5" height="1.5" />
+      <rect x="52"  y="72" width="1.5" height="1.5" opacity="0.7"/>
+      <rect x="60"  y="86" width="1.5" height="1.5" />
+      <rect x="76"  y="60" width="1.5" height="1.5" />
+      <rect x="84"  y="78" width="1.5" height="1.5" />
+      <rect x="100" y="68" width="1.5" height="1.5" opacity="0.8"/>
+      <rect x="108" y="84" width="1.5" height="1.5" />
+      <rect x="126" y="58" width="1.5" height="1.5" />
+      <rect x="134" y="78" width="1.5" height="1.5" />
+      <rect x="146" y="74" width="1.5" height="1.5" opacity="0.7"/>
+    </g>
+    <!-- mullion -->
+    <rect x="78" y="0" width="3" height="100" fill="#2a1c14" />
+    <rect x="0" y="48" width="160" height="3" fill="#2a1c14" />
+  </g>
+
+  <!-- POSTER / NOTES ON WALL (left side) -->
+  <g transform="translate(80,100)">
+    <rect x="0" y="0" width="80" height="100" fill="#f0e6d3" stroke="#1a1108" stroke-width="1" transform="rotate(-2)" />
+    <line x1="10" y1="14" x2="70" y2="14" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <line x1="10" y1="22" x2="62" y2="22" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <line x1="10" y1="30" x2="68" y2="30" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <line x1="10" y1="50" x2="60" y2="50" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <line x1="10" y1="58" x2="64" y2="58" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <line x1="10" y1="74" x2="56" y2="74" stroke="#3d2918" stroke-width="0.6" transform="rotate(-2)" />
+    <!-- pin -->
+    <circle cx="40" cy="6" r="4" fill="#c47a6a" />
+    <circle cx="40" cy="6" r="1.5" fill="#1a1108" />
+  </g>
+  <g transform="translate(180,80)">
+    <rect x="0" y="0" width="64" height="40" fill="#f5c842" stroke="#1a1108" stroke-width="1" transform="rotate(3)" />
+    <text x="32" y="22" text-anchor="middle" font-family="sans-serif" font-size="9" fill="#1a1108" transform="rotate(3)">TODO</text>
+    <circle cx="32" cy="4" r="3" fill="#c47a6a" />
+  </g>
+
+  <!-- MONITOR AMBIENT LIGHT (behind monitor) -->
+  <ellipse cx="380" cy="280" rx="280" ry="160" fill="url(#monitorAmbient)" />
+
+  <!-- DESK (perspective) -->
+  <polygon points="20,440 780,440 740,520 60,520" fill="url(#deskTop)" />
+  <polygon points="20,440 780,440 776,444 24,444" fill="rgba(245,166,35,0.3)" />
+  <polygon points="60,520 740,520 720,560 80,560" fill="url(#deskFront)" />
+  <line x1="100" y1="468" x2="700" y2="468" stroke="#2a1c12" stroke-width="1" opacity="0.5" />
+  <line x1="140" y1="490" x2="640" y2="490" stroke="#2a1c12" stroke-width="0.8" opacity="0.4" />
+  <line x1="180" y1="505" x2="600" y2="505" stroke="#2a1c12" stroke-width="0.6" opacity="0.5" />
+
+  <!-- MONITOR -->
+  <g transform="translate(280,200)">
+    <!-- bezel -->
+    <rect x="0" y="0" width="260" height="180" rx="6" fill="#0a0805" stroke="#1a1108" stroke-width="3" />
+    <!-- screen -->
+    <rect x="10" y="10" width="240" height="155" fill="url(#screenGlow)" />
+    <!-- glow halo around screen -->
+    <rect x="-4" y="-4" width="268" height="188" rx="8" fill="none" stroke="rgba(168,212,192,0.25)" stroke-width="4" filter="url(#bigGlow)" />
+
+    <!-- v3 FIX: monitor content rendered by React (DeskScene.jsx) bound to
+         the CURRENT task. SVG asset keeps only the empty bezel + screen +
+         glow + an idle cursor so the background never leaks code from a
+         previous task. -->
+    <text x="16" y="28" font-family="JetBrains Mono, monospace" font-size="8" fill="#7cb87a" opacity="0.55">$</text>
+    <rect x="28" y="22" width="6" height="9" fill="#f5a623" opacity="0.9">
+      <animate attributeName="opacity" values="1;0;1" dur="0.9s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- Stand -->
+    <rect x="116" y="180" width="28" height="22" fill="#1a1108" />
+    <rect x="86"  y="200" width="88" height="6" rx="2" fill="#1a1108" />
+  </g>
+
+  <!-- KEYBOARD -->
+  <g transform="translate(300,460)">
+    <rect x="0" y="0" width="200" height="36" rx="4" fill="#1a1108" />
+    <rect x="4" y="4" width="192" height="28" rx="2" fill="#2a1c14" />
+    <!-- keys grid -->
+    <g fill="#3d2918">
+      <rect x="8"   y="8"  width="16" height="6" rx="1" />
+      <rect x="26"  y="8"  width="16" height="6" rx="1" />
+      <rect x="44"  y="8"  width="16" height="6" rx="1" />
+      <rect x="62"  y="8"  width="16" height="6" rx="1" />
+      <rect x="80"  y="8"  width="16" height="6" rx="1" />
+      <rect x="98"  y="8"  width="16" height="6" rx="1" />
+      <rect x="116" y="8"  width="16" height="6" rx="1" />
+      <rect x="134" y="8"  width="16" height="6" rx="1" />
+      <rect x="152" y="8"  width="16" height="6" rx="1" />
+      <rect x="170" y="8"  width="16" height="6" rx="1" />
+      <rect x="8"   y="16" width="16" height="6" rx="1" />
+      <rect x="26"  y="16" width="16" height="6" rx="1" />
+      <rect x="44"  y="16" width="16" height="6" rx="1" />
+      <rect x="62"  y="16" width="16" height="6" rx="1" />
+      <rect x="80"  y="16" width="16" height="6" rx="1" />
+      <rect x="98"  y="16" width="16" height="6" rx="1" />
+      <rect x="116" y="16" width="16" height="6" rx="1" />
+      <rect x="134" y="16" width="16" height="6" rx="1" />
+      <rect x="152" y="16" width="16" height="6" rx="1" />
+      <rect x="170" y="16" width="16" height="6" rx="1" />
+      <rect x="8"   y="24" width="78" height="6" rx="1" />
+      <rect x="100" y="24" width="86" height="6" rx="1" />
+    </g>
+  </g>
+
+  <!-- LAMP GLOW (warm pool of light on left side of desk) -->
+  <circle cx="160" cy="450" r="200" fill="url(#lampGlow)" />
+
+  <!-- DESK LAMP (left side) -->
+  <g transform="translate(140,360)">
+    <ellipse cx="0" cy="80" rx="18" ry="4" fill="#1a1108" />
+    <rect x="-12" y="76" width="24" height="6" rx="2" fill="#2a1c14" />
+    <line x1="0" y1="76" x2="-4" y2="40" stroke="#3d2918" stroke-width="3" />
+    <circle cx="-4" cy="40" r="2.5" fill="#1a1108" />
+    <line x1="-4" y1="40" x2="14" y2="14" stroke="#3d2918" stroke-width="3" />
+    <circle cx="14" cy="14" r="2.5" fill="#1a1108" />
+    <path d="M 14 14 L 38 -2 L 46 18 L 22 28 Z" fill="#3d2918" stroke="#1a1108" stroke-width="1" />
+    <path d="M 22 28 L 46 18 L 44 20 L 24 30 Z" fill="#f5a623" />
+    <ellipse cx="32" cy="22" rx="12" ry="6" fill="rgba(245,166,35,0.9)" filter="url(#bigGlow)" />
+  </g>
+
+  <!-- COFFEE MUG (right of monitor) -->
+  <g transform="translate(580,448)">
+    <ellipse cx="14" cy="0" rx="14" ry="3.5" fill="#3d2918" />
+    <path d="M 0 0 L 4 30 L 24 30 L 28 0 Z" fill="#8a5a3a" />
+    <ellipse cx="14" cy="0" rx="13" ry="3" fill="#3a1f10" />
+    <ellipse cx="14" cy="-0.5" rx="10" ry="1.4" fill="#5e3220" />
+    <path d="M 28 8 Q 38 12 36 20 Q 32 26 24 24" fill="none" stroke="#8a5a3a" stroke-width="3" />
+    <!-- steam -->
+    <path d="M 10 -8 Q 8 -16 12 -20 Q 16 -24 14 -32" stroke="#f0e6d3" stroke-width="1" fill="none" opacity="0.4">
+      <animate attributeName="opacity" values="0;0.4;0" dur="2.2s" repeatCount="indefinite"/>
+    </path>
+    <path d="M 18 -8 Q 20 -14 18 -20 Q 16 -26 20 -32" stroke="#f0e6d3" stroke-width="1" fill="none" opacity="0.35">
+      <animate attributeName="opacity" values="0;0.35;0" dur="2.6s" begin="0.8s" repeatCount="indefinite"/>
+    </path>
+  </g>
+
+  <!-- NOTEBOOK -->
+  <g transform="translate(620,470) rotate(8)">
+    <rect x="0" y="0" width="80" height="40" fill="#c47a6a" />
+    <rect x="3" y="3" width="74" height="34" fill="#1a1108" />
+    <line x1="6" y1="10" x2="74" y2="10" stroke="#f0e6d3" stroke-width="0.4" opacity="0.6"/>
+    <line x1="6" y1="18" x2="74" y2="18" stroke="#f0e6d3" stroke-width="0.4" opacity="0.6"/>
+    <line x1="6" y1="26" x2="74" y2="26" stroke="#f0e6d3" stroke-width="0.4" opacity="0.6"/>
+    <line x1="6" y1="34" x2="74" y2="34" stroke="#f0e6d3" stroke-width="0.4" opacity="0.6"/>
+  </g>
+
+  <!-- VIGNETTE -->
+  <rect x="0" y="0" width="800" height="600" fill="url(#vignette)" />
+</svg>

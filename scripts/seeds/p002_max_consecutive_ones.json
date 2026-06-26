@@ -1,0 +1,9 @@
+{
+  "question_id": "p002_max_consecutive_ones",
+  "title": "Maximum consecutive ones",
+  "exercise_type": 3,
+  "difficulty": "easy",
+  "skill_focus": ["decomposition", "edge_case"],
+  "function_signature": "def find_max_consecutive_ones(nums: list[int]) -> int",
+  "problem_sketch": "Given a binary array (list of 0s and 1s), return the length of the longest run of consecutive 1s."
+}

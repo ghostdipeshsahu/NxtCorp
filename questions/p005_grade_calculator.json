@@ -1,0 +1,130 @@
+{
+  "id": "p005",
+  "title": "Fix the Grade Calculator",
+  "exercise_type": "type_5",
+  "phase": "1",
+  "sequence": 5,
+  "function_signature": "def get_grade(scores):",
+  "meeting_script": [
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "Academic team submitted a grade calculator yesterday and QA rejected it. Ananya from the client side wants to explain what went wrong."
+    },
+    {
+      "character": "ananya",
+      "name": "Ananya Singh",
+      "role": "Client Representative",
+      "message": "Yes. The function is giving wrong grades for some students. We have a specific grading system and it is not being followed correctly."
+    },
+    {
+      "character": "ananya",
+      "name": "Ananya Singh",
+      "role": "Client Representative",
+      "message": "Our grades are: A for 90 and above, B for 75 to 89, C for 60 to 74, D for 40 to 59, and F for below 40."
+    },
+    {
+      "character": "rahul",
+      "name": "Rahul Mehta",
+      "role": "HR Manager",
+      "message": "And if a student has no scores recorded at all — empty list — it should return NA not crash the system."
+    },
+    {
+      "character": "sneha",
+      "name": "Sneha Kapoor",
+      "role": "Finance Manager",
+      "message": "Also — averages should be rounded down. 74.9 is a C not a B. We use floor rounding always."
+    },
+    {
+      "character": "priya",
+      "name": "Priya Sharma",
+      "role": "Manager",
+      "message": "The original prompt and the failed tests are on your desk. Fix the prompt precisely — add what is missing, do not rewrite everything."
+    }
+  ],
+  "sample_tests": [
+    {
+      "input": [
+        [
+          95,
+          90
+        ]
+      ],
+      "expected": "A"
+    },
+    {
+      "input": [
+        [
+          80,
+          75
+        ]
+      ],
+      "expected": "B"
+    },
+    {
+      "input": [
+        [
+          65,
+          60
+        ]
+      ],
+      "expected": "C"
+    },
+    {
+      "input": [
+        [
+          50,
+          45
+        ]
+      ],
+      "expected": "D"
+    },
+    {
+      "input": [
+        [
+          35,
+          30
+        ]
+      ],
+      "expected": "F"
+    },
+    {
+      "input": [
+        []
+      ],
+      "expected": "NA"
+    }
+  ],
+  "original_broken_prompt": "Calculate a student's final grade based on their scores.",
+  "broken_code_produced": "def get_grade(scores):\n    if not scores:\n        return 'NA'\n    avg = sum(scores) / len(scores)\n    if avg >= 90: return 'A'\n    if avg >= 75: return 'B'\n    if avg >= 60: return 'C'\n    return 'F'",
+  "failed_tests_shown": [
+    {
+      "input": [
+        [
+          50,
+          45
+        ]
+      ],
+      "expected": "D",
+      "actual": "F"
+    },
+    {
+      "input": [
+        [
+          91,
+          88
+        ]
+      ],
+      "expected": "B",
+      "actual": "A"
+    },
+    {
+      "input": [
+        []
+      ],
+      "expected": "NA",
+      "actual": "NA"
+    }
+  ]
+}

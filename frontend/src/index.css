@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: theme('colors.nxt.bg');
+  color: theme('colors.nxt.text');
+  font-family: theme('fontFamily.sans');
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* Custom cursor — subtle orange dot follows the mouse. */
+.nxt-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: theme('colors.nxt.accent');
+  box-shadow: 0 0 12px 2px rgba(233, 69, 96, 0.45);
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.15s ease, height 0.15s ease, opacity 0.2s ease;
+  mix-blend-mode: screen;
+}
+.nxt-cursor.is-down {
+  width: 6px;
+  height: 6px;
+}
+.nxt-cursor.is-hover {
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 18px 4px rgba(255, 215, 0, 0.45);
+}
+
+/* Respect reduced motion globally — disables all CSS transitions/animations
+   when the user has the OS setting on. Framer Motion respects this via its
+   own `useReducedMotion` hook. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar styling — dark theme + slim */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: theme('colors.nxt.surface'); }
+::-webkit-scrollbar-thumb {
+  background: theme('colors.nxt.border');
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: theme('colors.nxt.muted'); }
+
+/* Onboarding cards: lock text selection across every descendant. Forced with
+   !important to beat any cached or inherited rule. Inputs/textareas still
+   work because user-select is overridden on those by browser defaults. */
+.onb-no-select,
+.onb-no-select * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+.onb-no-select input,
+.onb-no-select textarea {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
