@@ -4,13 +4,27 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from backend.config import settings
 
 
+def _normalize_db_url(url: str) -> str:
+    """Render's managed Postgres handsout the deprecated `postgres://` scheme,
+    but SQLAlchemy 2.x requires `postgresql+psycopg2://`. Rewrite at engine
+    creation time so deployment "just works" without operator intervention.
+    """
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg2://" + url[len("postgres://"):]
+    if url.startswith("postgresql://") and "+" not in url.split("://", 1)[0]:
+        return "postgresql+psycopg2://" + url[len("postgresql://"):]
+    return url
+
+
+_db_url = _normalize_db_url(settings.database_url)
+
 _engine_kwargs: dict = {"pool_pre_ping": True, "future": True}
-if settings.database_url.startswith("sqlite"):
+if _db_url.startswith("sqlite"):
     # FastAPI dispatches handlers on a worker thread pool; sqlite connections
     # must be shareable across threads for that to work.
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
 
-engine = create_engine(settings.database_url, **_engine_kwargs)
+engine = create_engine(_db_url, **_engine_kwargs)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
