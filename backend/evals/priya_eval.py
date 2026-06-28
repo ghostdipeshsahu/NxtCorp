@@ -1,18 +1,22 @@
 """Priya Coach Agent — automated eval set.
 
 Codifies Priya's coaching invariants as an external automated harness.
-Mirrors the Zara eval shape: criteria, retry runner, hard cap, CLI.
+11 criteria — mix of deterministic + LLM judge.
 
-Six criteria — mix of deterministic + LLM judge:
   P001  addresses by name              deterministic
-  P002  no answer revealed             LLM judge (except L4)
-  P003  ends with question (or L4)     deterministic, ladder-aware
-  P004  matches ladder rubric          LLM judge
-  P005  warm tone, no "wrong"          deterministic blocklist
-  P006  short paragraph (≤3 sentences) deterministic
+  P002  no answer revealed             LLM judge (skipped at L4)
+  P003  ends with question / L4 reveal deterministic, ladder-aware
+  P004  depth matches ladder rubric    LLM judge
+  P005  warm tone — no harsh phrasing  deterministic blocklist
+  P006  short paragraph                deterministic
+  P007  grounded in Zara's finding     LLM judge
+  P008  no repeat of prior question    LLM judge (skipped on attempt 1)
+  P009  reflects student's attempt     LLM judge
+  P010  exactly one question mark      deterministic
+  P011  L4 reveal is accurate          LLM judge (L4 only)
 
-The runner re-invokes the coach with prior failures fed into the system
-prompt as `[EVAL FEEDBACK]`. Hard cap MAX_RETRIES=3.
+Runner re-invokes coach with prior failures injected into the
+student_prompt as [EVAL FEEDBACK]. Hard cap MAX_RETRIES=3.
 
 CLI:
     python -m backend.evals.priya_eval --question p001_bonus_calculator \\
@@ -31,9 +35,6 @@ from typing import Any, Callable, Optional
 from backend.agents.assessor import AssessmentResult, assess
 from backend.agents.coach import (
     CoachReply,
-    build_system_prompt,
-    build_user_message,
-    compute_expression,
     coach as coach_call,
 )
 from backend.core.code_executor import ExecutionResult, execute
@@ -55,8 +56,6 @@ logger = logging.getLogger("nxtcorp.evals.priya")
 
 @dataclass
 class PriyaCriterion:
-    """A single eval check against a Priya coach reply."""
-
     id: str
     name: str
     principle: str
@@ -66,99 +65,7 @@ class PriyaCriterion:
     check: Callable[..., tuple[bool, str]]
 
 
-# ---------- Deterministic checks ----------
-
-
-def _check_p001_addresses_by_name(
-    body: str, level: int, student_name: str,
-    attempt_history: list[dict[str, Any]], question: dict[str, Any],
-    assessment: AssessmentResult,
-) -> tuple[bool, str]:
-    """P001 — Priya must address the student by their first name at least once."""
-    if not student_name:
-        return True, "(no student_name supplied — skip)"
-    first = student_name.strip().split()[0]
-    pattern = rf"\b{re.escape(first)}\b"
-    if not re.search(pattern, body, re.IGNORECASE):
-        return False, f"never addresses '{first}' by name"
-    return True, f"addresses '{first}' by name"
-
-
-def _check_p003_ends_with_question_or_l4_reveal(
-    body: str, level: int, student_name: str,
-    attempt_history: list[dict[str, Any]], question: dict[str, Any],
-    assessment: AssessmentResult,
-) -> tuple[bool, str]:
-    """P003 — L1/L2/L3 must end with a question mark. L4 must contain BOTH
-    an explicit reveal AND a "why does this matter" question.
-    """
-    text = body.rstrip()
-    if level in (1, 2, 3, 0):
-        if not text.endswith("?"):
-            return False, f"L{level} reply doesn't end with '?'"
-        return True, f"L{level} ends with a question"
-    # L4
-    has_question = "?" in text
-    why_markers = ("why", "why does", "in your own words", "why is this important")
-    has_why = any(m in text.lower() for m in why_markers)
-    if not (has_question and has_why):
-        return False, "L4 must reveal the gap AND ask a 'why does this matter' question"
-    return True, "L4 reveals + asks why"
-
-
-_TONE_BLOCKLIST = (
-    "that is wrong",
-    "that's wrong",
-    "you are wrong",
-    "you're wrong",
-    "incorrect",
-    "wrong answer",
-    "you failed",
-    "you didn't get",
-    "you missed everything",
-)
-
-
-def _check_p005_warm_tone(
-    body: str, level: int, student_name: str,
-    attempt_history: list[dict[str, Any]], question: dict[str, Any],
-    assessment: AssessmentResult,
-) -> tuple[bool, str]:
-    """P005 — never uses harsh 'wrong/incorrect/failed' phrasing.
-    Warm coaching tone enforced via phrase blocklist.
-    """
-    lower = body.lower()
-    hits = [m for m in _TONE_BLOCKLIST if m in lower]
-    if hits:
-        return False, f"harsh phrase(s) detected: {hits}"
-    return True, "no harsh phrases"
-
-
-def _split_sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [p for p in parts if p.strip()]
-
-
-def _check_p006_short_paragraph(
-    body: str, level: int, student_name: str,
-    attempt_history: list[dict[str, Any]], question: dict[str, Any],
-    assessment: AssessmentResult,
-) -> tuple[bool, str]:
-    """P006 — Priya keeps it Slack-style. One short paragraph, max 3
-    sentences for L1/L2/L3. L4 allows up to 4 sentences (reveal + why).
-    """
-    sentences = _split_sentences(body)
-    max_allowed = 4 if level == 4 else 3
-    if len(sentences) > max_allowed:
-        return False, f"{len(sentences)} sentences > max {max_allowed} for L{level}"
-    if "\n\n" in body.strip():
-        return False, "contains a paragraph break — must be ONE paragraph"
-    if len(body) > 600:
-        return False, f"reply too long ({len(body)} chars)"
-    return True, f"{len(sentences)} sentence(s), within rhythm"
-
-
-# ---------- LLM judges ----------
+# ---------- LLM judge wrapper ----------
 
 
 def _call_llm_judge(
@@ -179,48 +86,54 @@ def _call_llm_judge(
         return True, f"(judge skipped — {type(e).__name__})", {}
 
 
-_P002_JUDGE_SYSTEM = """You are evaluating a Socratic coaching message from Priya at NxtCorp.
+# ---------- P001 — addresses by name (deterministic) ----------
 
-For Socratic levels L1, L2, and L3, Priya MUST NOT reveal the answer. She
-points toward where the gap is, names characters or topics, or quotes one
-specific failing input — but she NEVER states the missing rule, value, or
-fix. Only L4 is allowed to reveal.
 
-You will be told which level this message is at.
+def _check_p001(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    if not student_name:
+        return True, "(no student_name supplied — skip)"
+    first = student_name.strip().split()[0]
+    if not re.search(rf"\b{re.escape(first)}\b", body, re.IGNORECASE):
+        return False, f"never addresses '{first}' by name"
+    return True, f"addresses '{first}' by name"
 
-For L1/L2/L3 messages, "reveal" means:
-  - stating the missing rule explicitly ("you forgot the cap at Rs 50,000")
-  - stating the correct return value ("the function should return 50000")
-  - telling the student exactly what to add ("add a check for years > 1")
 
-For L1/L2/L3, "OK" means:
-  - asking what character X said about Y
-  - quoting one specific failing input and asking what the student's prompt does with it
-  - pointing at the dimension of the gap (limits, boundaries, missing rule) without naming the rule
+# ---------- P002 — no answer revealed (LLM, skip L4) ----------
+
+
+_P002_JUDGE_SYSTEM = """You are checking whether a coach's message reveals the answer to a student.
+
+The coach must NOT state:
+- The missing rule or constraint by name
+- The correct value or threshold
+- What the student needs to add or change
 
 Respond ONLY with valid JSON:
 {
   "reveals_answer": true,
-  "pass": false,
-  "reason": "one sentence — what was revealed, or 'no reveal — points at the gap without naming it'"
+  "reason": "one sentence — what was revealed, or 'nothing revealed'"
 }
-
-"pass" is true when reveals_answer is false (for L1/L2/L3) OR when level is 4.
 """
 
 
-def _check_p002_no_answer_revealed(
+def _check_p002(
     body: str, level: int, student_name: str,
     attempt_history: list[dict[str, Any]], question: dict[str, Any],
     assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
 ) -> tuple[bool, str]:
-    """P002 — for L1/L2/L3, must NOT state the fix/value/rule. For L4 reveal
-    is expected (P003 handles structure)."""
     if level == 4:
-        return True, "L4 — reveal is permitted"
+        return True, "L4 — reveal is permitted (P011 checks accuracy)"
     user = (
-        f"Message level: L{level}\n\n"
-        f"Priya's message:\n\"{body}\""
+        f"Zara identified this gap:\n\"{assessment.primary_gap}\"\n\n"
+        f"Coach message:\n\"{body}\""
     )
     skipped, skip_reason, parsed = _call_llm_judge(_P002_JUDGE_SYSTEM, user)
     if skipped:
@@ -228,68 +141,322 @@ def _check_p002_no_answer_revealed(
     reveals = bool(parsed.get("reveals_answer", False))
     reason = str(parsed.get("reason", "(no reason)")).strip()
     if reveals:
-        return False, f"reveals answer at L{level} — {reason}"
-    return True, "no answer revealed"
+        return False, f"reveals answer — {reason}"
+    return True, "no reveal"
 
 
-_P004_JUDGE_SYSTEM = """You are evaluating whether a Socratic coaching message
-matches its assigned escalation level.
-
-Ladder rubric:
-  L1 (conceptual nudge):
-    - General area pointer. Does NOT name a specific character or rule by name.
-    - May reference "the meeting" in general terms.
-    - Style: "Think about what was said about limits — is there anything your
-      prompt doesn't account for?"
-
-  L2 (specific direction):
-    - Names a character or specific topic from the meeting.
-    - Still does not state the rule or value.
-    - Style: "Think about what Sneha said specifically — does your prompt
-      address the maximum bonus?"
-
-  L3 (concrete pointer):
-    - Quotes a specific failing input OR names a specific numeric value
-      already known to the student.
-    - Asks them to trace through.
-    - Style: "When the calculated bonus is Rs 60,000 — what does your
-      function return? Did you specify that?"
-
-  L4 (reveal):
-    - States the missing rule plainly.
-    - Asks a follow-up: why does this matter?
-
-Respond ONLY with valid JSON:
-{
-  "matches_level": true,
-  "actual_level_seen": "L1" | "L2" | "L3" | "L4" | "ambiguous",
-  "reason": "one sentence"
-}
-
-"matches_level" is true when the message is at the assigned level — neither
-too shallow nor too specific.
-"""
+# ---------- P003 — ends with question / L4 reveal+why (deterministic) ----------
 
 
-def _check_p004_matches_ladder_rubric(
+def _check_p003(
     body: str, level: int, student_name: str,
     attempt_history: list[dict[str, Any]], question: dict[str, Any],
     assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
 ) -> tuple[bool, str]:
-    """P004 — depth of the response must match the assigned ladder level."""
+    text = body.rstrip()
+    if level in (0, 1, 2, 3):
+        if not text.endswith("?"):
+            return False, f"L{level} reply doesn't end with '?'"
+        return True, f"L{level} ends with a question"
+    # L4
+    has_question = "?" in text
+    why_markers = ("why", "why does", "why do you think", "in your own words")
+    has_why = any(m in text.lower() for m in why_markers)
+    if not (has_question and has_why):
+        return False, "L4 must contain reveal AND a 'why does this matter' question"
+    return True, "L4 reveals + asks why"
+
+
+# ---------- P004 — depth matches ladder rubric (LLM) ----------
+
+
+_P004_JUDGE_SYSTEM = """You are checking whether a coach's message matches the required depth for its ladder level.
+
+Level definitions:
+- L1: Conceptual nudge only. Points toward the general area of the gap. Must NOT name the character, rule, or constraint involved.
+- L2: Specific direction. Names the character OR the rule category. Does not state the value.
+- L3: Concrete pointer. Names both character and rule. Stops just short of the exact value or fix.
+- L4: Full reveal. States exactly what was missing — character, rule, and value all present.
+
+Respond ONLY with valid JSON:
+{
+  "level_matches": true,
+  "actual_depth": "too shallow / correct / too deep",
+  "reason": "one sentence explaining the verdict"
+}
+"""
+
+
+def _check_p004(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
     user = (
-        f"ASSIGNED level: L{level}\n\n"
-        f"Priya's message:\n\"{body}\""
+        f"Ladder level: L{level}\n"
+        f"Zara's primary gap: \"{assessment.primary_gap}\"\n"
+        f"Coach message: \"{body}\""
     )
     skipped, skip_reason, parsed = _call_llm_judge(_P004_JUDGE_SYSTEM, user)
     if skipped:
         return True, skip_reason
-    matches = bool(parsed.get("matches_level", False))
-    actual = parsed.get("actual_level_seen", "?")
+    matches = bool(parsed.get("level_matches", False))
+    actual = parsed.get("actual_depth", "?")
     reason = str(parsed.get("reason", "(no reason)")).strip()
     if not matches:
-        return False, f"depth mismatch — assigned L{level}, judged as {actual}: {reason}"
+        return False, f"depth mismatch — judged as {actual}: {reason}"
     return True, f"matches L{level}"
+
+
+# ---------- P005 — warm tone (deterministic blocklist) ----------
+
+
+_TONE_BLOCKLIST = (
+    "wrong",
+    "incorrect",
+    "failed",
+    "you missed",
+    "you forgot",
+    "that's not right",
+    "thats not right",
+    "you didn't",
+    "you didnt",
+    "you left out",
+)
+
+
+def _check_p005(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    lower = body.lower()
+    hits = [m for m in _TONE_BLOCKLIST if m in lower]
+    if hits:
+        return False, f"harsh phrase(s) detected: {hits}"
+    return True, "no harsh phrases"
+
+
+# ---------- P006 — short paragraph (deterministic) ----------
+
+
+def _split_sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [p for p in parts if p.strip()]
+
+
+def _check_p006(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    sentences = _split_sentences(body)
+    max_allowed = 4 if level == 4 else 3
+    if len(sentences) > max_allowed:
+        return False, f"{len(sentences)} sentences > max {max_allowed} for L{level}"
+    if "\n\n" in body.strip():
+        return False, "contains a paragraph break — must be ONE paragraph"
+    if len(body) > 600:
+        return False, f"reply too long ({len(body)} chars > 600)"
+    return True, f"{len(sentences)} sentence(s), within rhythm"
+
+
+# ---------- P007 — grounded in Zara's finding (LLM) ----------
+
+
+_P007_JUDGE_SYSTEM = """You are checking whether a coach's question is about the right gap.
+
+The coach's question must be about the same gap Zara identified — not about a different rule, a different character, or a different part of the task.
+
+Respond ONLY with valid JSON:
+{
+  "targets_correct_gap": true,
+  "reason": "one sentence — what gap the question targets, and whether it matches"
+}
+"""
+
+
+def _check_p007(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    if not assessment.primary_gap:
+        return True, "(no primary_gap from Zara — skip)"
+    user = (
+        f"Zara identified this as the primary gap:\n\"{assessment.primary_gap}\"\n\n"
+        f"Coach message:\n\"{body}\""
+    )
+    skipped, skip_reason, parsed = _call_llm_judge(_P007_JUDGE_SYSTEM, user)
+    if skipped:
+        return True, skip_reason
+    matches = bool(parsed.get("targets_correct_gap", False))
+    reason = str(parsed.get("reason", "(no reason)")).strip()
+    if not matches:
+        return False, f"wrong gap — {reason}"
+    return True, "targets correct gap"
+
+
+# ---------- P008 — no repeat of prior question (LLM, skip attempt 1) ----------
+
+
+_P008_JUDGE_SYSTEM = """You are checking whether a coach is repeating themselves.
+
+The current message fails if it asks essentially the same question as the previous one — even if the wording is different. A different angle, a different character reference, or a different framing counts as meaningfully different.
+
+Respond ONLY with valid JSON:
+{
+  "is_repeat": false,
+  "reason": "one sentence — what is the same or what changed"
+}
+"""
+
+
+def _previous_priya_message(conv: Optional[list[dict[str, str]]]) -> Optional[str]:
+    if not conv:
+        return None
+    for m in reversed(conv):
+        if (m.get("character") or "").lower() == "priya":
+            body = (m.get("body") or "").strip()
+            if body:
+                return body
+    return None
+
+
+def _check_p008(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    if attempt_number <= 1:
+        return True, "attempt 1 — no prior message to compare"
+    prev = _previous_priya_message(conversation_history)
+    if not prev:
+        return True, "(no prior Priya message found in history)"
+    user = (
+        f"Previous Priya message for this task:\n\"{prev}\"\n\n"
+        f"Current Priya message:\n\"{body}\""
+    )
+    skipped, skip_reason, parsed = _call_llm_judge(_P008_JUDGE_SYSTEM, user)
+    if skipped:
+        return True, skip_reason
+    is_repeat = bool(parsed.get("is_repeat", False))
+    reason = str(parsed.get("reason", "(no reason)")).strip()
+    if is_repeat:
+        return False, f"repeats prior question — {reason}"
+    return True, "meaningfully different from prior"
+
+
+# ---------- P009 — reflects student's attempt (LLM) ----------
+
+
+_P009_JUDGE_SYSTEM = """You are checking whether a coach's message responds to what the student actually wrote.
+
+The coach's message fails if it could have been sent to ANY student regardless of what they wrote. It must acknowledge, reference, or respond to something specific in the student's attempt — either what they got right, how close they came, or the specific gap in their wording.
+
+Respond ONLY with valid JSON:
+{
+  "reflects_attempt": true,
+  "reason": "one sentence — what in the student's attempt is reflected, or why it reads as generic"
+}
+"""
+
+
+def _check_p009(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+    student_attempt: str = "",
+) -> tuple[bool, str]:
+    if not student_attempt.strip():
+        return True, "(no student attempt to compare)"
+    user = (
+        f"Student's attempt:\n\"{student_attempt}\"\n\n"
+        f"Coach message:\n\"{body}\""
+    )
+    skipped, skip_reason, parsed = _call_llm_judge(_P009_JUDGE_SYSTEM, user)
+    if skipped:
+        return True, skip_reason
+    reflects = bool(parsed.get("reflects_attempt", False))
+    reason = str(parsed.get("reason", "(no reason)")).strip()
+    if not reflects:
+        return False, f"generic — doesn't reflect attempt: {reason}"
+    return True, "reflects student's attempt"
+
+
+# ---------- P010 — exactly one question mark (deterministic) ----------
+
+
+def _check_p010(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    count = body.count("?")
+    if count == 0:
+        return False, "no question marks at all"
+    if count > 1:
+        return False, f"{count} question marks — must be exactly one Socratic question"
+    return True, "exactly one question"
+
+
+# ---------- P011 — L4 reveal is accurate (LLM, L4 only) ----------
+
+
+_P011_JUDGE_SYSTEM = """You are checking whether a coach's L4 reveal is accurate.
+
+The reveal passes if:
+- The rule or constraint Priya names matches what Zara identified
+- The value Priya states (if any) matches what Zara reported
+- Nothing additional is revealed beyond what Zara flagged
+
+Respond ONLY with valid JSON:
+{
+  "reveal_is_accurate": true,
+  "reason": "one sentence — what matches or what diverges"
+}
+"""
+
+
+def _check_p011(
+    body: str, level: int, student_name: str,
+    attempt_history: list[dict[str, Any]], question: dict[str, Any],
+    assessment: AssessmentResult,
+    conversation_history: Optional[list[dict[str, str]]] = None,
+    attempt_number: int = 1,
+) -> tuple[bool, str]:
+    if level != 4:
+        return True, "non-L4 — P011 only applies at L4"
+    if not assessment.primary_gap:
+        return True, "(no primary_gap from Zara — skip)"
+    user = (
+        f"Zara's primary gap:\n\"{assessment.primary_gap}\"\n\n"
+        f"Coach message:\n\"{body}\""
+    )
+    skipped, skip_reason, parsed = _call_llm_judge(_P011_JUDGE_SYSTEM, user)
+    if skipped:
+        return True, skip_reason
+    accurate = bool(parsed.get("reveal_is_accurate", False))
+    reason = str(parsed.get("reason", "(no reason)")).strip()
+    if not accurate:
+        return False, f"reveal inaccurate — {reason}"
+    return True, "reveal matches Zara's finding"
 
 
 # ---------- Criteria registry ----------
@@ -299,56 +466,101 @@ CRITERIA: list[PriyaCriterion] = [
     PriyaCriterion(
         id="P001",
         name="addresses by name",
-        principle="Priya must address the student by their first name at least once",
-        bad_example="Think about what was said about limits in the meeting.",
-        good_example="Devika, think about what was said about limits in the meeting.",
+        principle="Student's first name must appear at least once",
+        bad_example="Think about what happens when a very high salary is entered.",
+        good_example="Devika, think about what happens when a very high salary is entered.",
         check_kind="deterministic",
-        check=_check_p001_addresses_by_name,
+        check=_check_p001,
     ),
     PriyaCriterion(
         id="P002",
         name="no answer revealed",
-        principle="For L1/L2/L3, must NOT state the missing rule, correct value, or required fix",
-        bad_example="(L1) You forgot the Rs 50,000 cap. Add a check that caps at 50000.",
-        good_example="(L1) Devika, think about what Sneha said about limits — does your prompt account for that?",
+        principle="For L1/L2/L3 must not state the missing rule, correct value, or fix",
+        bad_example="(L1) Devika, you need to handle the Rs 50,000 cap — add a check that returns 50,000.",
+        good_example="(L1) Devika, Sneha mentioned something specific about what should happen when a number gets too large — did that make it into your instructions?",
         check_kind="llm",
-        check=_check_p002_no_answer_revealed,
+        check=_check_p002,
     ),
     PriyaCriterion(
         id="P003",
         name="ends with question (or L4 reveal+why)",
-        principle="L1/L2/L3 must end with '?'. L4 must contain a reveal AND a 'why does this matter' question",
-        bad_example="(L1) Look at what Sneha said about limits.",
-        good_example="(L1) Devika, think about what Sneha said about limits — anything missing?",
+        principle="L1/L2/L3 end with '?'; L4 has reveal AND 'why does this matter' question",
+        bad_example="(L1) Devika, think about the cap and what Sneha said about large bonuses.",
+        good_example="(L4) Devika, the missing piece was the Rs 50,000 cap. Why do you think this matters?",
         check_kind="deterministic",
-        check=_check_p003_ends_with_question_or_l4_reveal,
+        check=_check_p003,
     ),
     PriyaCriterion(
         id="P004",
-        name="matches ladder rubric",
-        principle="Depth of the response must match the assigned ladder level (L1 conceptual, L2 specific direction, L3 concrete pointer, L4 reveal)",
-        bad_example="(L1, too specific) Devika, what does your prompt return when the bonus exceeds Rs 50,000?",
-        good_example="(L1) Devika, think about what was said about limits — anything your prompt doesn't account for?",
+        name="depth matches ladder rubric",
+        principle="Depth matches assigned level (L1 conceptual, L2 names char/rule, L3 concrete pointer, L4 full reveal)",
+        bad_example="(L1, too deep) Devika, Sneha mentioned a cap — did you account for that?",
+        good_example="(L1) Devika, is there anything a stakeholder said that didn't make it in?",
         check_kind="llm",
-        check=_check_p004_matches_ladder_rubric,
+        check=_check_p004,
     ),
     PriyaCriterion(
         id="P005",
-        name="warm tone — no 'wrong'/'incorrect'/'failed'",
-        principle="Never uses harsh phrasing. Warm coaching language only.",
-        bad_example="Your prompt is wrong — it doesn't handle the cap.",
-        good_example="Good start! Now think about what happens when the bonus is large…",
+        name="warm tone — no harsh phrasing",
+        principle="No 'wrong', 'incorrect', 'failed', 'you missed', 'you forgot', etc.",
+        bad_example="Devika, you missed the cap constraint that Sneha mentioned.",
+        good_example="Devika, Sneha mentioned something about large bonuses — did that make it in?",
         check_kind="deterministic",
-        check=_check_p005_warm_tone,
+        check=_check_p005,
     ),
     PriyaCriterion(
         id="P006",
-        name="short paragraph — Slack rhythm",
-        principle="One paragraph, max 3 sentences (4 for L4 reveal). No paragraph breaks. Under 600 chars.",
-        bad_example="Long lecture spanning 6 sentences with bullet points and paragraph breaks.",
-        good_example="Devika, think about what Sneha said about limits — anything missing?",
+        name="short paragraph",
+        principle="≤3 sentences at L1/L2/L3; ≤4 at L4; no paragraph breaks; <600 chars",
+        bad_example="Long lecture spanning 5 sentences with a paragraph break.",
+        good_example="Devika, Sneha raised a specific constraint — did you give the AI instructions for that case?",
         check_kind="deterministic",
-        check=_check_p006_short_paragraph,
+        check=_check_p006,
+    ),
+    PriyaCriterion(
+        id="P007",
+        name="grounded in Zara's finding",
+        principle="Question targets the gap Zara identified — not a different rule or character",
+        bad_example="(Zara flagged cap) Devika, think about who qualifies for a bonus — did you cover all conditions?",
+        good_example="(Zara flagged cap) Devika, Sneha raised a constraint about the output — did you instruct the AI on that case?",
+        check_kind="llm",
+        check=_check_p007,
+    ),
+    PriyaCriterion(
+        id="P008",
+        name="no repeat of prior question",
+        principle="Current question must be meaningfully different from previous Priya message (skip on attempt 1)",
+        bad_example="L2 rewording L1 with no new angle",
+        good_example="L2 adds a character name where L1 only pointed at the area",
+        check_kind="llm",
+        check=_check_p008,
+    ),
+    PriyaCriterion(
+        id="P009",
+        name="reflects student's attempt",
+        principle="Must reference something specific in the student's attempt — not a generic question",
+        bad_example="Devika, think about what Sneha was most concerned about during the meeting.",
+        good_example="Devika, you've got eligibility and the percentage right — the missing thing is what to do when the result crosses a threshold Sneha mentioned.",
+        check_kind="llm",
+        check=_check_p009,
+    ),
+    PriyaCriterion(
+        id="P010",
+        name="exactly one question",
+        principle="Exactly one '?' in the response — two questions violate single-Socratic-question rule",
+        bad_example="Did you capture everything? And what about when the bonus is large?",
+        good_example="Devika, Sneha mentioned something about large bonuses — did that make it in?",
+        check_kind="deterministic",
+        check=_check_p010,
+    ),
+    PriyaCriterion(
+        id="P011",
+        name="L4 reveal is accurate",
+        principle="At L4 the revealed rule and value must match Zara's primary_gap",
+        bad_example="(L4) Devika, the missing piece was the Rs 40,000 cap.",
+        good_example="(L4) Devika, the missing piece was the Rs 50,000 cap — why do you think this matters for payroll?",
+        check_kind="llm",
+        check=_check_p011,
     ),
 ]
 
@@ -358,7 +570,7 @@ CRITERIA: list[PriyaCriterion] = [
 # ============================================================================
 
 
-MAX_RETRIES = 3   # hard ceiling — agent does NOT loop infinitely
+MAX_RETRIES = 3   # hard ceiling
 
 
 @dataclass
@@ -375,7 +587,8 @@ class PriyaEvalReport:
         for i, att in enumerate(self.attempts, start=1):
             ok = "OK" if att.get("passed_all") else "FAIL"
             failed = att.get("failed", [])
-            lines.append(f"  attempt {i}: {ok} failed={failed!r}")
+            lvl = att.get("level", "?")
+            lines.append(f"  attempt {i}: {ok} L{lvl} failed={failed!r}")
         if self.failed_criteria:
             lines.append(f"  STILL FAILING after retries: {self.failed_criteria!r}")
         if self.final_reply:
@@ -385,10 +598,6 @@ class PriyaEvalReport:
 
 
 class PriyaEvalRunner:
-    """Run Priya, evaluate the output against CRITERIA, re-run with feedback
-    up to MAX_RETRIES times.
-    """
-
     def __init__(self, max_retries: int = MAX_RETRIES) -> None:
         self.max_retries = max_retries
 
@@ -410,8 +619,6 @@ class PriyaEvalRunner:
         feedback_notes: list[str] = []
 
         for attempt_idx in range(1, self.max_retries + 1):
-            # Inject prior failure feedback into student_prompt so coach()
-            # sees it in the user message build path.
             augmented_prompt = student_prompt
             if feedback_notes:
                 augmented_prompt = (
@@ -433,7 +640,7 @@ class PriyaEvalRunner:
                     exercise_type=exercise_type,
                     arjun_fired=False,
                     attempt_history=attempt_history,
-                    all_passed_override=False,  # eval flow always treats as "failed → coaching"
+                    all_passed_override=False,
                 )
             except LLMError as e:
                 logger.error("Priya LLM error on attempt %d: %s", attempt_idx, e)
@@ -443,11 +650,6 @@ class PriyaEvalRunner:
 
             report.final_reply = reply
             body = reply.body
-            # Always check against the level Priya ACTUALLY emitted — not
-            # the level the caller requested. compute_step inside coach()
-            # may have routed her to a different rung based on attempt
-            # history / Arjun gating, and the criteria need to evaluate
-            # the emitted depth.
             actual_level = reply.escalation_level
 
             attempt_record: dict[str, Any] = {
@@ -461,10 +663,22 @@ class PriyaEvalRunner:
 
             for crit in CRITERIA:
                 try:
-                    passed, reason = crit.check(
-                        body, actual_level, student_display_name,
-                        attempt_history or [], question, assessment,
-                    )
+                    # P009 needs the original student attempt as an extra arg.
+                    if crit.id == "P009":
+                        passed, reason = crit.check(
+                            body, actual_level, student_display_name,
+                            attempt_history or [], question, assessment,
+                            conversation_history=conversation_history,
+                            attempt_number=attempt_number,
+                            student_attempt=student_prompt,
+                        )
+                    else:
+                        passed, reason = crit.check(
+                            body, actual_level, student_display_name,
+                            attempt_history or [], question, assessment,
+                            conversation_history=conversation_history,
+                            attempt_number=attempt_number,
+                        )
                 except Exception as e:
                     passed = True
                     reason = f"(check raised {type(e).__name__}: {e}; defaulting pass)"
@@ -511,7 +725,6 @@ def _run_cli() -> int:
 
     question = load_question(args.question)
 
-    # Produce a real assessment so the coach has zara_findings to work with.
     gen_code = None
     execution = ExecutionResult(outcomes=[])
     if args.exercise_type in (1, 5):
@@ -528,9 +741,8 @@ def _run_cli() -> int:
         generated_code=gen_code,
     )
 
-    # Map requested level → attempt_number so compute_step inside coach()
-    # routes Priya to the matching ladder rung (without Arjun firing).
-    #   L1 → attempt 1, L2 → 2, L3 → 4, L4 → 5
+    # Map requested level → attempt_number so coach hits the right rung
+    # (without Arjun firing): L1→1, L2→2, L3→4, L4→5.
     attempt_for_level = {1: 1, 2: 2, 3: 4, 4: 5}.get(args.level, 1)
 
     runner = PriyaEvalRunner(max_retries=args.max_retries)
