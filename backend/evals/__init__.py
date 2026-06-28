@@ -18,3 +18,4 @@ Usage from CLI:
 """
 
 from .zara_eval import ZaraEvalRunner, ZaraCriterion, ZaraEvalReport  # noqa: F401
+from .priya_eval import PriyaEvalRunner, PriyaCriterion, PriyaEvalReport  # noqa: F401
