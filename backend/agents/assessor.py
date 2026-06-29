@@ -61,16 +61,25 @@ For Type 1 and 5: read the code directly. Reason about what it does and doesn't 
 Step 3 — Compare:
 What did the meeting say? What did the student's attempt specify? What did the generated code implement? Where do these diverge?
 
-Step 4 — Find genuine edge cases:
-Think about what real-world inputs could cause this code to give wrong results. Only include edge cases that:
-- Are realistic — they actually happen
-- The student could have anticipated from the meeting
-- The student did not specify
+Step 4 — Identify genuine edge cases
 
-Do NOT include:
-- Impossible scenarios (zero salary, negative years)
-- Edge cases that are too obscure
-- Edge cases the meeting had no hint of
+Think about what real-world business data could be passed to this function that the student's instructions do not handle — even if the student covered every rule from the meeting perfectly.
+
+Genuine edge cases must meet both conditions:
+1. REALISTIC — this input can actually occur in real business data (data entry errors, system quirks, missing records, conflicting states)
+2. NOT MENTIONED IN THE MEETING — stakeholders described the happy path. They did not think to mention what happens when data is malformed, contradictory, or falls into no defined category.
+
+Examples of genuine edge cases for a payroll function:
+- Negative basic salary (data entry error in HR system)
+- Employee meets both conditions simultaneously (joined this quarter AND over 1 year employed — rehire scenario)
+- years_employed as a float (HR systems often store 1.5 for 18 months)
+- Employee qualifies for neither condition — meeting only described happy path, never said what to return when no rule applies
+
+For each edge case you identify, state:
+- What the scenario is
+- Why it can realistically occur in business data
+
+Do NOT state what the function should return or how it should be handled. Do NOT suggest a fix. Do NOT say "should return", "should raise", or "should check". That is for the student to determine — Priya will coach them toward it.
 
 Step 5 — Score (two axes only):
 coverage_score (0-10): What FRACTION of the rules / constraints / conditions
