@@ -72,12 +72,17 @@ Do NOT include:
 - Edge cases that are too obscure
 - Edge cases the meeting had no hint of
 
-Step 5 — Score:
-requirement_quality (0-10): How completely and precisely did the student's attempt cover what the meeting said?
-output_quality (0-10):
-  For Type 1/5: How correct is the generated code based on your reasoning about it?
-  For Type 2/3/4: How complete and precise is the student's response?
-overall_score: average of both.
+Step 5 — Score (two axes only):
+coverage_score (0-10): What FRACTION of the rules / constraints / conditions
+  from the meeting did the student's attempt actually address? Walk every
+  rule in the meeting; score by how many were covered.
+specificity_score (0-10): For the parts the student DID address, how
+  PRECISELY were they stated? Vague hand-waves score low; exact values,
+  named conditions, and explicit return shapes score high.
+
+DO NOT emit `overall_score`. The backend computes it from your two scores.
+DO NOT emit `requirement_quality` or `output_quality`. Those are legacy
+field names — use `coverage_score` and `specificity_score` only.
 
 Step 6 — Write zara_note:
 Tell Priya exactly:
@@ -95,9 +100,8 @@ Output format (JSON only — start with `{` end with `}`, no markdown):
   "primary_gap": "<short phrase>",
   "genuine_edge_cases": ["<short phrase>", ...],
   "scores": {
-    "requirement_quality": <0-10>,
-    "output_quality":      <0-10>,
-    "overall_score":       <0-10>
+    "coverage_score":    <0-10>,
+    "specificity_score": <0-10>
   },
   "zara_note": "<one short paragraph for Priya in your voice>"
 }
@@ -480,22 +484,33 @@ def assess(
     if isinstance(primary_gap, str):
         primary_gap = primary_gap.strip() or None
 
-    # Scores — LLM may nest them under `scores` or flatten them. Accept both.
+    # Scores — Zara now emits coverage_score + specificity_score only.
+    # overall_score is computed in Python, never trusted from the LLM.
+    # Legacy field names (requirement_quality / output_quality) accepted
+    # as fallback so older question-file or chat fixtures still parse.
     scores_block = parsed.get("scores") if isinstance(parsed.get("scores"), dict) else {}
-    def _pick_score(key: str, default: float = 0.0) -> float:
-        val = scores_block.get(key, parsed.get(key, default))
+
+    def _pick_score(primary: str, fallback: str, default: float = 0.0) -> float:
+        val = scores_block.get(primary,
+              scores_block.get(fallback,
+              parsed.get(primary,
+              parsed.get(fallback, default))))
         try:
             return max(0.0, min(10.0, float(val)))
         except (TypeError, ValueError):
             return default
 
-    requirement_quality = _pick_score("requirement_quality")
-    output_quality = _pick_score("output_quality")
-    overall_raw = scores_block.get("overall_score", parsed.get("overall_score"))
-    try:
-        overall_score = max(0.0, min(10.0, float(overall_raw)))
-    except (TypeError, ValueError):
-        overall_score = round((requirement_quality + output_quality) / 2.0, 2)
+    coverage_score = _pick_score("coverage_score", "requirement_quality")
+    specificity_score = _pick_score("specificity_score", "output_quality")
+
+    # Computed — never read from LLM output.
+    overall_score = round((coverage_score + specificity_score) / 2.0, 1)
+
+    # Keep AssessmentResult / RunResponse field names stable so the
+    # frontend ZaraCard + downstream code don't have to change. Coverage
+    # maps to requirement_quality, specificity maps to output_quality.
+    requirement_quality = coverage_score
+    output_quality = specificity_score
 
     omissions = _str_list(parsed.get("omissions"))
     commissions = _str_list(parsed.get("commissions"))

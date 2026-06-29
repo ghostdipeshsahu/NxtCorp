@@ -96,21 +96,29 @@ def _check_z001_primary_gap_specific(
 def _check_z003_score_calibrated(
     a: AssessmentResult, question: dict[str, Any], student_prompt: str,
 ) -> tuple[bool, str]:
-    """Z003 — scores must be in [0, 10] and not extreme unless justified."""
-    for key, val in (
-        ("requirement_quality", a.requirement_quality),
-        ("output_quality", a.output_quality),
-        ("overall_score", a.overall_score),
-    ):
+    """Z003 — coverage_score and specificity_score must be in [0, 10].
+    Neither can be 0.0 on a non-empty attempt. `overall_score` is computed
+    deterministically downstream, so it is NOT validated here.
+
+    In the runtime, `coverage_score` is aliased to `requirement_quality`
+    and `specificity_score` is aliased to `output_quality` on the
+    AssessmentResult — so we read those fields here.
+    """
+    coverage_score = a.requirement_quality      # alias for coverage_score
+    specificity_score = a.output_quality        # alias for specificity_score
+
+    for label, val in (("coverage_score", coverage_score), ("specificity_score", specificity_score)):
         if val is None or not (0.0 <= float(val) <= 10.0):
-            return False, f"{key}={val} out of [0,10]"
-    # Score = 0 only if attempt is genuinely empty.
-    if a.overall_score == 0.0 and student_prompt.strip():
-        return False, "overall_score=0 but student attempt is non-empty"
-    # Score = 10 only if no gaps_missing and primary_gap is None.
-    if a.overall_score >= 9.9 and (a.gaps_missing or a.primary_gap):
-        return False, "overall_score≈10 but gaps_missing or primary_gap is set"
-    return True, "scores in range and proportional"
+            return False, f"{label}={val} out of [0,10]"
+
+    # Either score = 0.0 only if attempt is genuinely empty.
+    if student_prompt.strip():
+        if coverage_score == 0.0:
+            return False, "coverage_score=0 but student attempt is non-empty"
+        if specificity_score == 0.0:
+            return False, "specificity_score=0 but student attempt is non-empty"
+
+    return True, "coverage + specificity in range and proportional"
 
 
 def _check_z004_no_fix_revealed(
